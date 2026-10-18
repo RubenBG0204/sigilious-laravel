@@ -1,26 +1,45 @@
-import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./supabase-config.js";
 import { getCurrentUser } from "./users.js";
 
 const ORDERS_KEY = "sigilious_orders";
-const ORDERS_ENDPOINT = `${SUPABASE_URL}/rest/v1/orders`;
-
-function orderHeaders(token) {
-  return {
-    apikey: SUPABASE_ANON_KEY,
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json"
-  };
-}
 
 function normalizeOrder(order) {
   return {
-    id: order.id,
-    userId: order.userId || order.user_id || "guest",
+    id: String(order.id),
+    userId: String(order.userId ?? order.user_id ?? "guest"),
     name: order.name || order.customer_name || "",
     items: order.items || [],
     total: Number(order.total) || 0,
     date: order.date || order.created_at || new Date().toISOString()
   };
+}
+
+async function request(method, body) {
+  const user = getCurrentUser();
+
+  const response = await fetch("/api/orders", {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...(user?.accessToken ? { Authorization: `Bearer ${user.accessToken}` } : {})
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+
+  const text = await response.text();
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = null;
+  }
+
+  if (!response.ok) {
+    const firstError = data?.errors ? Object.values(data.errors)[0]?.[0] : null;
+    throw new Error(firstError || data?.message || "No se pudo completar el pedido.");
+  }
+
+  return data;
 }
 
 export function getOrders() {
@@ -36,13 +55,7 @@ export async function syncOrdersFromSupabase() {
   if (!user?.id || !user?.accessToken) return getOrders();
 
   try {
-    const response = await fetch(`${ORDERS_ENDPOINT}?user_id=eq.${encodeURIComponent(user.id)}&select=*&order=created_at.desc`, {
-      headers: orderHeaders(user.accessToken)
-    });
-
-    if (!response.ok) throw new Error(`Supabase orders request failed: ${response.status}`);
-
-    const rows = await response.json();
+    const rows = await request("GET");
     const orders = rows.map(normalizeOrder);
     saveOrders(orders);
     return orders;
@@ -53,30 +66,20 @@ export async function syncOrdersFromSupabase() {
 }
 
 export async function createOrder(order) {
-  const normalizedOrder = normalizeOrder(order);
-  const orders = getOrders();
-  saveOrders([normalizedOrder, ...orders.filter((entry) => entry.id !== normalizedOrder.id)]);
+  const data = await request("POST", {
+    name: order.name,
+    items: order.items.map((item) => ({
+      product_id: item.product.id,
+      size: item.size || "M",
+      qty: item.qty
+    }))
+  });
 
-  const user = getCurrentUser();
-  if (!user?.id || !user?.accessToken) return;
-
-  await fetch(ORDERS_ENDPOINT, {
-    method: "POST",
-    headers: {
-      ...orderHeaders(user.accessToken),
-      Prefer: "return=minimal"
-    },
-    body: JSON.stringify({
-      id: normalizedOrder.id,
-      user_id: user.id,
-      customer_name: normalizedOrder.name,
-      items: normalizedOrder.items,
-      total: normalizedOrder.total,
-      created_at: normalizedOrder.date
-    })
-  }).catch((error) => console.warn(error));
+  const saved = normalizeOrder(data);
+  saveOrders([saved, ...getOrders().filter((entry) => entry.id !== saved.id)]);
+  return saved;
 }
 
 export function getUserOrders(userId) {
-  return getOrders().filter((order) => order.userId === userId);
+  return getOrders().filter((order) => order.userId === String(userId));
 }
