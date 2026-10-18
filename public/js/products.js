@@ -1,5 +1,5 @@
 // Product data and helpers
-import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./supabase-config.js";
+import { getCurrentUser } from "./users.js";
 
 const DEFAULT_PRODUCTS = [
   { id: "p1", name: "Camiseta Costura Contour", price: 42, category: "tshirts", image: "img-2", description: "Algodon transpirable con ajuste entallado.", sizes: ["S", "M", "L", "XL"] },
@@ -14,13 +14,6 @@ const DEFAULT_PRODUCTS = [
 ];
 
 const PRODUCT_KEY = "sigilious_products";
-const PRODUCTS_ENDPOINT = `${SUPABASE_URL}/rest/v1/products`;
-
-const supabaseHeaders = {
-  apikey: SUPABASE_ANON_KEY,
-  Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-  "Content-Type": "application/json"
-};
 
 function normalizeProduct(product) {
   return {
@@ -34,23 +27,36 @@ function normalizeProduct(product) {
   };
 }
 
-async function requestProducts(path = "", options = {}) {
-  const response = await fetch(`${PRODUCTS_ENDPOINT}${path}`, {
-    ...options,
-    headers: {
-      ...supabaseHeaders,
-      ...(options.headers || {})
-    }
-  });
+async function adminRequest(path, method, body) {
+  const user = getCurrentUser();
+  if (!user?.accessToken) throw new Error("Inicia sesión como administrador.");
 
-  if (!response.ok) {
-    throw new Error(`Supabase products request failed: ${response.status}`);
-  }
+  const response = await fetch(`/api/products${path}`, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      Authorization: `Bearer ${user.accessToken}`
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
 
   if (response.status === 204) return null;
 
   const text = await response.text();
-  return text ? JSON.parse(text) : null;
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = null;
+  }
+
+  if (!response.ok) {
+    const firstError = data?.errors ? Object.values(data.errors)[0]?.[0] : null;
+    throw new Error(firstError || data?.message || "No se pudo guardar el producto.");
+  }
+
+  return data;
 }
 
 export function getProducts() {
@@ -122,30 +128,26 @@ export async function syncProductsFromSupabase() {
   }
 }
 
+function adminPayload(product) {
+  return {
+    name: product.name,
+    category: product.category,
+    price: product.price,
+    image: product.image
+  };
+}
+
 export async function addProductToSupabase(product) {
-  const normalizedProduct = normalizeProduct(product);
-  await requestProducts("", {
-    method: "POST",
-    headers: { Prefer: "return=minimal" },
-    body: JSON.stringify(normalizedProduct)
-  });
-  addProduct(normalizedProduct);
+  await adminRequest("", "POST", adminPayload(product));
+  await syncProductsFromSupabase();
 }
 
 export async function updateProductInSupabase(product) {
-  const normalizedProduct = normalizeProduct(product);
-  await requestProducts(`?id=eq.${encodeURIComponent(normalizedProduct.id)}`, {
-    method: "PATCH",
-    headers: { Prefer: "return=minimal" },
-    body: JSON.stringify(normalizedProduct)
-  });
-  updateProduct(normalizedProduct);
+  await adminRequest(`/${encodeURIComponent(product.id)}`, "PUT", adminPayload(product));
+  await syncProductsFromSupabase();
 }
 
 export async function deleteProductFromSupabase(id) {
-  await requestProducts(`?id=eq.${encodeURIComponent(id)}`, {
-    method: "DELETE",
-    headers: { Prefer: "return=minimal" }
-  });
-  deleteProduct(id);
+  await adminRequest(`/${encodeURIComponent(id)}`, "DELETE");
+  await syncProductsFromSupabase();
 }
