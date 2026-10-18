@@ -547,7 +547,7 @@ function initProfile() {
 
   const user = getCurrentUser();
   if (!user) {
-    card.innerHTML = "<p class='muted'>No has iniciado sesión.</p><a class='btn' href='login.html'>Iniciar sesión</a>";
+    card.innerHTML = "<p class='muted'>No has iniciado sesión.</p><a class='btn' href='login'>Iniciar sesión</a>";
     return;
   }
 
