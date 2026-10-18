@@ -1,58 +1,95 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Sigilious
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Tienda online de ropa creada junto a un compañero. Esta versión migra el frontend original (HTML, CSS y JavaScript) a un proyecto **Laravel** con **MySQL**, añadiendo un backend completo: productos, usuarios, carrito, pedidos y panel de administración.
 
-## About Laravel
+## Funcionalidades
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- **Catálogo** con búsqueda, filtros por categoría y precio, y ordenación. Desde la página principal se puede entrar directamente a una categoría (`/shop?category=tshirts`).
+- **Página de producto** con selección de talla y cantidad.
+- **Carrito** que se guarda en la base de datos para cada usuario, de modo que le acompaña al iniciar sesión desde otro navegador.
+- **Pedidos** guardados en MySQL. El servidor calcula el total a partir de los precios de la base de datos, sin fiarse del cliente.
+- **Registro e inicio de sesión** con tokens de Laravel Sanctum.
+- **Panel de administración** para crear, editar y borrar productos, accesible solo para usuarios con `is_admin`.
+- Diseño responsive.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Tecnologías
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+| Capa | Tecnología |
+|---|---|
+| Backend | PHP, Laravel 13, Laravel Sanctum |
+| Base de datos | MySQL |
+| Frontend | HTML5, CSS3, JavaScript (módulos ES), plantillas Blade |
+| Entorno | Laragon, Composer, Git |
 
-## Learning Laravel
+## Estructura principal
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+```
+app/Http/Controllers/    Controladores (Auth, Product, Cart, Order)
+app/Http/Middleware/     EnsureUserIsAdmin
+app/Models/              Product, Cart, Order, User
+database/migrations/     Tablas de la base de datos
+database/seeders/        ProductSeeder (productos de ejemplo)
+resources/views/         Páginas Blade (tienda, carrito, checkout, admin...)
+public/css, public/js    Estilos y JavaScript del frontend
+routes/web.php           Páginas y endpoint público de productos
+routes/api.php           API: usuarios, carrito, pedidos y administración
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+## API
 
-## Contributing
+| Método | Ruta | Acceso |
+|---|---|---|
+| GET | `/api/products` | Público |
+| POST, PUT, DELETE | `/api/products`, `/api/products/{id}` | Administrador |
+| POST | `/api/register`, `/api/login` | Público |
+| POST | `/api/logout` | Usuario con sesión |
+| GET, PUT | `/api/cart` | Usuario con sesión |
+| POST | `/api/orders` | Público (si hay sesión, se asocia al usuario) |
+| GET | `/api/orders` | Usuario con sesión |
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Instalación
 
-## Code of Conduct
+Requisitos: PHP 8.3 o superior, Composer y MySQL (se recomienda [Laragon](https://laragon.org)).
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```bash
+git clone https://github.com/RubenBG0204/sigilious-laravel.git
+cd sigilious-laravel
+composer install
+cp .env.example .env
+php artisan key:generate
+```
 
-## Security Vulnerabilities
+Crea una base de datos llamada `sigilious` y configura el acceso en `.env`:
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=sigilious
+DB_USERNAME=root
+DB_PASSWORD=
+```
 
-## License
+Crea las tablas, carga los productos de ejemplo y arranca el servidor:
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```bash
+php artisan migrate
+php artisan db:seed --class=ProductSeeder
+php artisan serve
+```
+
+Con Laragon, si la carpeta está dentro de `www`, el sitio queda disponible en `http://sigilious.test`.
+
+### Cuenta de administrador
+
+Regístrate desde la web y, en la tabla `users` de la base de datos, pon el campo `is_admin` a `1` en tu usuario. Después podrás entrar en `/admin`.
+
+## Pendiente
+
+- Recuperación de contraseña por correo.
+- Pasarela de pago real (el checkout actual valida los datos, pero no cobra).
+- Tests automáticos.
+
+## Autor
+
+Rubén Barrutia Grasa · [GitHub](https://github.com/RubenBG0204)
