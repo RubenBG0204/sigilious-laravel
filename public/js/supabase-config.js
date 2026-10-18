@@ -1,0 +1,3 @@
+// Public Supabase configuration for browser-side reads/writes with RLS.
+export const SUPABASE_URL = "https://igiceukdmgcizqvysskp.supabase.co";
+export const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnaWNldWtkbWdjaXpxdnlzc2twIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5ODI3NDUsImV4cCI6MjA5MzU1ODc0NX0.eokKbSAsvlWCvJxrp0k3WRm_ogqGRsPohXLpkewiZyo";

@@ -1,0 +1,19 @@
+﻿/* Layout utilities */
+.about-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; color: var(--muted); }
+
+.checkout-layout { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 24px; }
+
+.orders { display: grid; gap: 16px; }
+
+.order-card { background: var(--white); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
+
+.nav-actions .icon-btn { transition: transform 0.3s ease; }
+.nav-actions .icon-btn:hover { transform: translateY(-2px); }
+
+/* Glass utility */
+.glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(227, 230, 239, 0.7);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius);
+}
