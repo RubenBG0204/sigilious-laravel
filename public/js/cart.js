@@ -1,8 +1,6 @@
-import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./supabase-config.js";
 import { getCurrentUser } from "./users.js";
 
 const CART_KEY = "sigilious_cart";
-const CART_ENDPOINT = `${SUPABASE_URL}/rest/v1/carts`;
 
 function normalizeSize(size) {
   return typeof size === "string" ? size.trim().toUpperCase() : "";
@@ -11,37 +9,40 @@ function normalizeSize(size) {
 function normalizeCart(cart) {
   return (Array.isArray(cart) ? cart : [])
     .map((item) => ({
-      id: item.id,
+      id: String(item.id),
       qty: Number(item.qty) || 0,
       size: normalizeSize(item.size)
     }))
     .filter((item) => item.id && item.qty > 0);
 }
 
-function cartHeaders(token) {
-  return {
-    apikey: SUPABASE_ANON_KEY,
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json"
-  };
+async function cartRequest(method, body) {
+  const user = getCurrentUser();
+
+  const response = await fetch("/api/cart", {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      Authorization: `Bearer ${user.accessToken}`
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+
+  if (!response.ok) throw new Error(`Cart request failed: ${response.status}`);
+
+  return response.json();
 }
 
 async function persistUserCart(cart) {
   const user = getCurrentUser();
   if (!user?.id || !user?.accessToken) return;
 
-  await fetch(CART_ENDPOINT, {
-    method: "POST",
-    headers: {
-      ...cartHeaders(user.accessToken),
-      Prefer: "resolution=merge-duplicates,return=minimal"
-    },
-    body: JSON.stringify({
-      user_id: user.id,
-      items: normalizeCart(cart),
-      updated_at: new Date().toISOString()
-    })
-  }).catch((error) => console.warn(error));
+  try {
+    await cartRequest("PUT", { items: normalizeCart(cart) });
+  } catch (error) {
+    console.warn(error);
+  }
 }
 
 export function getCart() {
@@ -59,14 +60,8 @@ export async function syncCartFromSupabase() {
   if (!user?.id || !user?.accessToken) return getCart();
 
   try {
-    const response = await fetch(`${CART_ENDPOINT}?user_id=eq.${encodeURIComponent(user.id)}&select=items&limit=1`, {
-      headers: cartHeaders(user.accessToken)
-    });
-
-    if (!response.ok) throw new Error(`Supabase cart request failed: ${response.status}`);
-
-    const rows = await response.json();
-    const remoteCart = normalizeCart(rows?.[0]?.items || []);
+    const data = await cartRequest("GET");
+    const remoteCart = normalizeCart(data?.items || []);
     const localCart = getCart();
     const nextCart = remoteCart.length ? remoteCart : localCart;
 
@@ -81,21 +76,23 @@ export async function syncCartFromSupabase() {
 }
 
 export function addToCart(id, qty = 1, size = "") {
+  const productId = String(id);
   const normalizedSize = normalizeSize(size);
   const amount = Number(qty) || 1;
   const cart = getCart();
-  const item = cart.find((entry) => entry.id === id && entry.size === normalizedSize);
+  const item = cart.find((entry) => entry.id === productId && entry.size === normalizedSize);
 
   if (item) item.qty += amount;
-  else cart.push({ id, qty: amount, size: normalizedSize });
+  else cart.push({ id: productId, qty: amount, size: normalizedSize });
 
   saveCart(cart);
 }
 
 export function updateQty(id, size, qty) {
+  const productId = String(id);
   const normalizedSize = normalizeSize(size);
   const cart = getCart().map((item) => (
-    item.id === id && item.size === normalizedSize
+    item.id === productId && item.size === normalizedSize
       ? { ...item, qty: Number(qty) || 0 }
       : item
   ));
@@ -104,8 +101,9 @@ export function updateQty(id, size, qty) {
 }
 
 export function removeItem(id, size) {
+  const productId = String(id);
   const normalizedSize = normalizeSize(size);
-  saveCart(getCart().filter((item) => !(item.id === id && item.size === normalizedSize)));
+  saveCart(getCart().filter((item) => !(item.id === productId && item.size === normalizedSize)));
 }
 
 export function clearCart() {
