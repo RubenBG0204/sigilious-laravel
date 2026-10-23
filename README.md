@@ -48,23 +48,15 @@ routes/api.php           API: usuarios, carrito, pedidos y administración
 | GET | `/api/orders` | Usuario con sesión |
 
 
-📚 Documentación
+## 📚 Documentación
 
-Toda la documentación técnica de Sigilious está organizada en los siguientes documentos:
-
-Arquitectura del proyecto
-
-Base de datos
-
-Instalación y configuración
-
-Funcionalidades
-
-API
-
-Seguridad y mejoras
-
-Historial de desarrollo
+- [Arquitectura del proyecto](docs/arquitectura.md)
+- [Base de datos](docs/base-de-datos.md)
+- [Instalación](docs/instalacion.md)
+- [Funcionalidades](docs/funcionalidades.md)
+- [API](docs/api.md)
+- [Seguridad y mejoras](docs/seguridad-y-mejoras.md)
+- [Historial de desarrollo](docs/historial-desarrollo.md)
 
 ## Instalación
 
