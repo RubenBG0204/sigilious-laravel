@@ -47,6 +47,25 @@ routes/api.php           API: usuarios, carrito, pedidos y administración
 | POST | `/api/orders` | Público (si hay sesión, se asocia al usuario) |
 | GET | `/api/orders` | Usuario con sesión |
 
+
+📚 Documentación
+
+Toda la documentación técnica de Sigilious está organizada en los siguientes documentos:
+
+Arquitectura del proyecto
+
+Base de datos
+
+Instalación y configuración
+
+Funcionalidades
+
+API
+
+Seguridad y mejoras
+
+Historial de desarrollo
+
 ## Instalación
 
 Requisitos: PHP 8.3 o superior, Composer y MySQL (se recomienda [Laragon](https://laragon.org)).
